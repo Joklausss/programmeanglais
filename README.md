@@ -69,6 +69,7 @@ programmeanglais/
         ├── sequences-seconde.js    # 6 séquences de Seconde  (SEQ_SECONDE)
         ├── sequences-premiere.js   # 6 séquences de Première  (SEQ_PREMIERE)
         ├── sequences-terminale.js  # 6 séquences de Terminale (SEQ_TERMINALE + assemblage SEQUENCES)
+        ├── sequences-extra.js      # 6 modules « extra » (2/niveau : aller plus loin + passerelle)
         ├── data-bank.js            # Exercices, actualité, offres/tokens
         ├── export.js               # Génération ZIP / DOCX / PPTX / PDF / SVG (JS pur)
         └── app.js                  # Routeur SPA, pages, compte, assistant, bibliothèque

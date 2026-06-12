@@ -98,7 +98,8 @@ const LIBRARY = (() => {
   return out;
 })();
 
-const findSeq = id => LIBRARY.find(x => x.id === id) || SEQUENCES.find(x => x.id === id) || GENERATED.find(x => x.id === id);
+const EXTRA = (typeof EXTRA_MODULES !== 'undefined') ? EXTRA_MODULES : [];
+const findSeq = id => LIBRARY.find(x => x.id === id) || SEQUENCES.find(x => x.id === id) || EXTRA.find(x => x.id === id) || GENERATED.find(x => x.id === id);
 
 /* ---------- Favoris & séquences générées (persistés) ---------- */
 const FAV_KEY = 'lingualab_favorites', GEN_KEY = 'lingualab_generated';
@@ -534,8 +535,8 @@ function renderDetail(id) {
     <h3>Modalités de travail</h3><div class="chips">${d.modalites.map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>
   </div>
   <div class="panel"><h2><span class="ic">🚀</span> Prolongements & ressources prof</h2>
-    <h3>Prolongements suggérés</h3><ul class="tick">${s.prolongements.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
-    <h3>Ressources pour le professeur</h3><ul class="tick">${s.ressourcesProf.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+    <h3>Prolongements suggérés</h3><ul class="tick">${(s.prolongements || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+    ${(s.ressourcesProf && s.ressourcesProf.length) ? `<h3>Ressources pour le professeur</h3><ul class="tick">${s.ressourcesProf.map(p => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
   </div>`;
 
   if (s.idees && s.idees.length) main += `<div class="panel"><h2><span class="ic">💡</span> Banque d'idées de thèmes <span class="muted" style="font-weight:400;font-size:.62em">(à piocher / varier)</span></h2>
@@ -549,9 +550,12 @@ function renderDetail(id) {
   const variantBanner = s.variant
     ? `<div class="preview-note" style="margin:16px 0 0">ℹ️ Déclinaison <b>${s.statut}</b> · cible CECRL <b>${s.cecrl}</b>. ${s.statut === 'LVA' ? "Contenu de référence." : esc(adaptForStatut(s).adaptation)} <b>Le téléchargement ajuste automatiquement la longueur des productions à la voie.</b></div>`
     : '';
+  const extraBanner = s.extra
+    ? `<div class="preview-note" style="margin:16px 0 0;background:#fff7ed;border-color:#fed7aa;color:#9a3412">🚀 <b>Module extra — ${esc(s.moduleType)}.</b> ${esc(s.bridge)}</div>`
+    : '';
   app.innerHTML = `<div class="page"><div class="wrap">
-    <a href="#/${s.generated ? 'assistant' : 'bibliotheque'}" class="muted small">← ${s.generated ? 'Relancer l\'assistant' : 'Retour à la bibliothèque'}</a>
-    ${head}${variantBanner}${genBanner}
+    <a href="#/${s.generated ? 'assistant' : (s.extra ? 'programmation' : 'bibliotheque')}" class="muted small">← ${s.generated ? 'Relancer l\'assistant' : (s.extra ? 'Retour à la programmation' : 'Retour à la bibliothèque')}</a>
+    ${head}${variantBanner}${extraBanner}${genBanner}
     <div class="detail-grid"><div>${main}</div>${buybox}</div>
   </div></div>`;
 }
@@ -685,6 +689,19 @@ function renderProgrammation() {
           return `<tr><th style="width:46%">${a}</th><td>${everywhere ? 'Travaillée dans chaque séquence' : (inTask ? `Dominante de ${inTask} tâche${inTask > 1 ? 's' : ''} finale${inTask > 1 ? 's' : ''}` : 'Travaillée dans les séances')}</td></tr>`;
         }).join('')}</tbody></table>
       </div>
+
+      ${(() => { const extras = EXTRA.filter(m => m.niveau === lv); if (!extras.length) return ''; return `
+      <div class="panel" style="margin-top:22px;background:linear-gradient(180deg,#fff7ed,#fff)">
+        <h2><span class="ic">🚀</span> Modules extra — aller plus loin &amp; préparer l'année suivante</h2>
+        <p class="muted small">Deux modules bonus (hors programme obligatoire) : un pour <b>approfondir</b>, un pour faire la <b>passerelle</b> vers le niveau supérieur. Cliquez pour ouvrir la fiche.</p>
+        <div class="grid grid-2" style="margin-top:10px">${extras.map(m => `
+          <div class="card res-card" style="padding:18px" onclick="location.hash='#/sequence/${m.id}'">
+            <div class="chips" style="margin-bottom:8px"><span class="chip ${m.moduleType === 'Passerelle' ? 'amber' : ''}">${m.moduleType}</span><span class="chip">CECRL ${m.cecrl}</span><span class="chip">${m.seances} séances</span></div>
+            <h3 style="font-size:1.05rem;margin:.1em 0 .3em">${esc(m.title)}</h3>
+            <p class="muted small" style="margin:0 0 .5em">${esc(m.resume)}</p>
+            <p class="small" style="margin:0;color:#9a3412">🔗 ${esc(m.bridge)}</p>
+          </div>`).join('')}</div>
+      </div>`; })()}
 
       <div class="panel" style="background:var(--brand-soft);border-color:#bfdbfe">
         <p class="small" style="margin:0 0 8px;color:var(--brand-dk)">✅ <b>Conformité (voie générale) :</b> ${axesCount} axes couverts (minimum 5 requis), dont l'axe 6 obligatoire. Les 6 activités langagières sont équilibrées et la progression est spiralaire.</p>
