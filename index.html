@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinguaLab — Ressources pédagogiques d'anglais · Lycée</title>
+  <meta name="description" content="Séquences et séances d'anglais clés en main, conformes au programme officiel du lycée français. Preview riche, exercices, évaluations et assistant de préparation." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <a href="#app" class="skip-link">Aller au contenu principal</a>
+
+  <!-- ============ HEADER / NAV ============ -->
+  <header class="site-header" id="top">
+    <div class="wrap header-inner">
+      <a href="#/accueil" class="brand" data-link>
+        <span class="brand-mark">L</span>
+        <span class="brand-name">Lingua<strong>Lab</strong></span>
+      </a>
+      <nav class="main-nav" id="mainNav">
+        <a href="#/bibliotheque" data-link>Bibliothèque</a>
+        <a href="#/programmation" data-link>Programmation</a>
+        <a href="#/assistant" data-link>Assistant</a>
+        <a href="#/exercices" data-link>Exercices</a>
+        <a href="#/mon-espace" data-link>Mon espace</a>
+        <a href="#/actualite" data-link>Actualité</a>
+        <a href="#/premium" data-link>Premium</a>
+      </nav>
+      <div class="header-actions">
+        <span class="token-pill" id="tokenPill" title="Vos tokens (crédits)">🪙 <strong id="tokenCount">5</strong></span>
+        <button class="btn btn-primary btn-sm" id="accountBtn">Se connecter</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ APP OUTLET ============ -->
+  <main id="app"></main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="wrap footer-grid">
+      <div>
+        <div class="brand footer-brand">
+          <span class="brand-mark">L</span><span class="brand-name">Lingua<strong>Lab</strong></span>
+        </div>
+        <p class="muted">Le réflexe des professeurs d'anglais pour préparer vite des cours conformes au programme.</p>
+      </div>
+      <div>
+        <h4>Naviguer</h4>
+        <a href="#/bibliotheque" data-link>Bibliothèque</a>
+        <a href="#/assistant" data-link>Assistant de séquence</a>
+        <a href="#/exercices" data-link>Banque d'exercices</a>
+        <a href="#/actualite" data-link>Veille éducation</a>
+      </div>
+      <div>
+        <h4>La plateforme</h4>
+        <a href="#/premium" data-link>Offres & tokens</a>
+        <a href="#/accueil" data-link>Comment ça marche</a>
+        <a href="#/bibliotheque" data-link>Contribuer</a>
+      </div>
+      <div>
+        <h4>Conformité</h4>
+        <p class="muted small">Ressources alignées sur les programmes officiels (Eduscol). Respect du droit d'auteur — pas de scans de manuels. RGPD : aucune donnée élève nominative.</p>
+      </div>
+    </div>
+    <div class="wrap footer-bottom muted small">
+      © 2026 LinguaLab · Maquette de démonstration — modèle freemium & tokens · Licence ressources : Creative Commons (BY)
+    </div>
+  </footer>
+
+  <!-- ============ MODAL ============ -->
+  <div class="modal-overlay" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalClose" aria-label="Fermer">✕</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- ============ TOAST ============ -->
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/sequences-seconde.js"></script>
+  <script src="assets/js/sequences-premiere.js"></script>
+  <script src="assets/js/sequences-terminale.js"></script>
+  <script src="assets/js/data-bank.js"></script>
+  <script src="assets/js/export.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Dépendances (le projet n'en a pas, mais au cas où)
+node_modules/
+package-lock.json
+
+# Outils éditeur / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.claude/
+
+# Fichiers temporaires
+*.log
+*.tmp
+_*.js
