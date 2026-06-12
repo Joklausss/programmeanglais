@@ -107,6 +107,38 @@ Aucune recompilation : enregistrez et rechargez la page (**Ctrl + F5** pour igno
 
 ---
 
+## 🌐 Déploiement & publication
+
+Le dépôt est déjà initialisé en local avec un commit initial. Il ne reste qu'à le mettre en ligne et, si vous le souhaitez, héberger l'application (elle est 100 % statique).
+
+### 1. Publier le code sur GitHub
+
+**Avec GitHub CLI (`gh`) — le plus simple :**
+```bash
+# Installer gh une fois (Windows) :  winget install GitHub.cli
+gh auth login                     # connexion interactive à votre compte
+cd programmeanglais
+gh repo create programmeanglais --public --source=. --push
+```
+
+**Sans `gh`** — créez d'abord un dépôt vide sur github.com, puis :
+```bash
+cd programmeanglais
+git remote add origin https://github.com/<votre-compte>/programmeanglais.git
+git branch -M main
+git push -u origin main
+```
+
+### 2. Héberger l'application (gratuit)
+
+L'app étant statique (aucun build), tout hébergeur de fichiers statiques convient :
+
+- **GitHub Pages** : dépôt → *Settings → Pages → Source : « Deploy from a branch » → branche `main`, dossier `/ (root)`*. En ~1 min, l'app est en ligne sur `https://<compte>.github.io/programmeanglais/`.
+- **Netlify Drop** : glissez-déposez le dossier `programmeanglais` sur <https://app.netlify.com/drop> — mise en ligne immédiate (build command vide, publish directory = racine).
+- **Vercel / Cloudflare Pages** : connectez le dépôt GitHub ; framework « Other », sans commande de build.
+
+---
+
 ## ⚠️ Statut
 
 Projet **front-end haute-fidélité** (MVP). Les briques « vrai produit » décrites dans le concept (communauté, dépôts de contributeurs, paiement, modération) nécessiteraient un backend (authentification + base de données + paiement + stockage) et ne sont pas incluses ici.
