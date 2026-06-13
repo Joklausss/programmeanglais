@@ -209,18 +209,17 @@ function resourceCard(s, opts) {
   const voies = opts.allVoies;
   const coverTag = voies ? `${s.niveau} · LVA·LVB·LVC · ${axeShort(s.axe)}` : `${s.niveau} · ${s.statut} · ${axeShort(s.axe)}`;
   const sub = voies ? `${s.niveau} · 3 voies disponibles · ${s.seances} séances` : `${s.niveau} · ${s.statut} · CECRL ${s.cecrl} · ${s.seances} séances`;
-  return `<article class="card res-card" onclick="location.hash='#/sequence/${s.id}'">
-    <div class="res-cover" style="background:${s.visuel || 'linear-gradient(135deg,#1d4ed8,#7c3aed)'}">
-      <span class="res-axe">${coverTag}</span>
-      <span class="res-tokens">🪙 ${s.tokens}</span>
-    </div>
+  const metaVoie = voies ? 'LVA·LVB·LVC' : s.statut;
+  return `<article class="res-card axe-c${s.axe}" onclick="location.hash='#/sequence/${s.id}'">
+    <span class="seq-banner"></span>
     <div class="res-body">
+      <div class="res-meta"><span class="chip"><span class="axe-dot"></span>${s.niveau} · ${axeShort(s.axe)}</span></div>
       <h3>${esc(s.title)}</h3>
-      <p class="res-sub">${sub}</p>
-      <div class="chips">${(s.badges || []).slice(0, 2).map(badgeHTML).join('')}</div>
+      <p class="res-sub">${metaVoie} · ${s.seances} séances · ${esc(s.cecrl)}</p>
+      <div class="res-tags">${(s.badges || []).slice(0, 2).map(badgeHTML).join('')}</div>
       <div class="res-foot">
-        <span class="stars">${stars(s.note)}</span>
-        <span>⬇ ${s.telechargements.toLocaleString('fr-FR')}</span>
+        <span class="rating"><span class="stars">${stars(s.note)}</span></span>
+        <span class="res-sub">${s.telechargements ? '↓ ' + s.telechargements.toLocaleString('fr-FR') : (s.extra ? 'Module extra' : '')}</span>
       </div>
     </div>
   </article>`;
@@ -249,14 +248,14 @@ function renderHome() {
           <span><b>★ 4.8</b> note moyenne</span>
         </div>
       </div>
-      <div class="hero-card" onclick="location.hash='#/sequence/am-dream'" style="cursor:pointer">
-        <div class="hc-cover" style="background:${SEQUENCES[0].visuel}">
-          <span class="hc-axe">Axe 6 · Aires anglophones</span>
+      <div class="hero-card axe-c${SEQUENCES[1].axe}" onclick="location.hash='#/sequence/${SEQUENCES[1].id}'" style="cursor:pointer">
+        <div class="hc-cover">
+          <span class="hc-axe chip"><span class="axe-dot"></span>${SEQUENCES[1].niveau} · ${axeShort(SEQUENCES[1].axe)} · ${esc(axeShortName(axeName(SEQUENCES[1].axe, SEQUENCES[1].niveau)))}</span>
         </div>
         <div class="hc-body">
-          <h3>${esc(SEQUENCES[0].title)}</h3>
-          <p class="muted small">Première · LVA · B1+ · 6 séances · tâche finale podcast</p>
-          <div class="chips">${SEQUENCES[0].badges.map(badgeHTML).join('')}</div>
+          <h3>${esc(SEQUENCES[1].title)}</h3>
+          <p class="res-sub">${SEQUENCES[1].niveau} · ${SEQUENCES[1].statut} · CECRL ${SEQUENCES[1].cecrl} · ${SEQUENCES[1].seances} séances</p>
+          <div class="chips">${SEQUENCES[1].badges.map(badgeHTML).join('')}</div>
         </div>
       </div>
     </div>
@@ -414,7 +413,7 @@ function renderDetail(id) {
   const detailed = !!s.seancesDetail;
 
   const head = `
-  <div class="detail-hero" style="background:${s.visuel}">
+  <div class="detail-hero axe-c${s.axe}">
     <div class="dh-pad">
       <div class="dh-tags">
         <span class="chip">${s.niveau} · ${axeShort(s.axe)} ${esc(axeShortName(axeName(s.axe, s.niveau)))}</span>
