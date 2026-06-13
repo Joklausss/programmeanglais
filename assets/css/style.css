@@ -262,6 +262,8 @@ select,.select{appearance:none;-webkit-appearance:none;font:inherit;font-size:.9
 .opt:hover{border-color:var(--accent)}.opt.sel{background:var(--accent);color:var(--paper);border-color:var(--accent)}
 .wiz-input{width:100%;border:1px solid var(--rule);border-radius:var(--radius);padding:.75em .9em;font-family:inherit;font-size:.95rem;background:var(--paper-2)}
 .wiz-nav{display:flex;justify-content:space-between;margin-top:28px}
+.spinner{width:30px;height:30px;border:3px solid var(--rule);border-top-color:var(--accent);border-radius:50%;animation:llspin .8s linear infinite}
+@keyframes llspin{to{transform:rotate(360deg)}}
 .axe-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}.axe-pick .opt{display:flex;gap:.6em;align-items:center;text-align:left}
 .axe-pick .opt .ic{font-size:1.3em}
 .brief{border:1px solid var(--rule);border-radius:var(--radius);overflow:hidden}

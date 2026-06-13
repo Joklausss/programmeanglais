@@ -104,6 +104,10 @@ const findSeq = id => LIBRARY.find(x => x.id === id) || SEQUENCES.find(x => x.id
 /* ---------- Favoris & séquences générées (persistés) ---------- */
 const FAV_KEY = 'lingualab_favorites', GEN_KEY = 'lingualab_generated';
 let FAVORITES = (() => { try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch (e) { return []; } })();
+/* Endpoint de la fonction IA (Cloudflare Worker). Vide = génération locale uniquement.
+   Configurable sans toucher au code : collé par le prof dans l'assistant, stocké en local. */
+const AI_KEY = 'lingualab_ai_endpoint';
+let AI_ENDPOINT = (() => { try { return localStorage.getItem(AI_KEY) || ''; } catch (e) { return ''; } })();
 const isFav = id => FAVORITES.includes(id);
 function saveFav() { localStorage.setItem(FAV_KEY, JSON.stringify(FAVORITES)); }
 function toggleFav(id) {
@@ -543,7 +547,9 @@ function renderDetail(id) {
     <div class="chips" style="margin-top:10px;gap:8px">${s.idees.map((i, idx) => `<button class="chip chip-btn" onclick="useIdeaByIdx('${s.id}',${idx})" title="Générer une séquence sur ce thème">${esc(i)} <span style="opacity:.6">→</span></button>`).join('')}</div>
     <p class="muted small" style="margin-top:10px">👉 Cliquez une idée pour la générer avec l'assistant (niveau & axe pré-remplis).</p></div>`;
 
-  const genBanner = s.generated
+  const genBanner = s.aiGenerated
+    ? `<div class="preview-note" style="margin:16px 0 0">✨ <b>Séquence générée par l'IA</b> à partir d'articles réels (recherche web). <b>Vérifiez les liens et le contenu</b> avant usage en classe — les URLs des sources figurent dans les supports. Téléchargez le dossier (.zip) pour l'éditer.</div>`
+    : s.generated
     ? `<div class="preview-note" style="margin:16px 0 0">✨ <b>Séquence générée par l'assistant</b> à partir de votre cahier des charges. Les emplacements de documents notés « à sélectionner » sont à compléter avec vos supports authentiques. Téléchargez le dossier (.zip) pour l'éditer.</div>`
     : '';
   const variantBanner = s.variant
@@ -826,6 +832,20 @@ function renderWizStep() {
       <div class="gen-prob">💬 <b>Problématique proposée :</b><br>« ${esc(prob)} »</div>
       <p class="muted small">Architecture générée : ${WSTATE.duree} séances (anticipation → compréhension → production → trace écrite), tâche finale actionnelle, évaluations (diagnostique / formative / sommative) et grille CECRL ${cec}.</p>
       <button class="btn btn-primary btn-block" onclick="validateBrief()">✅ Valider et générer la séquence</button>
+      <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)">
+        ${AI_ENDPOINT ? `
+          <button class="btn btn-ghost btn-block" onclick="generateWithAI()">✨ Générer avec l'IA — vrais articles</button>
+          <p class="muted small" style="margin:.5em 0 0">L'IA cherche 2-3 articles réels sur « ${esc(WSTATE.theme || 'le thème')} » (sources web vérifiées) et rédige la séquence autour, au même format. ~5 s.</p>
+        ` : `
+          <details><summary class="muted small" style="cursor:pointer;list-style:none">✨ Activer la génération par IA (articles réels)…</summary>
+            <p class="muted small" style="margin:.6em 0 .4em">Collez l'URL de votre fonction Cloudflare Worker (voir <code>worker/README.md</code>) :</p>
+            <div style="display:flex;gap:8px">
+              <input class="wiz-input" id="aiEndpoint" placeholder="https://lingualab-ia.votre-compte.workers.dev" style="flex:1" />
+              <button class="btn btn-ghost btn-sm" onclick="saveAiEndpoint()">Enregistrer</button>
+            </div>
+          </details>
+        `}
+      </div>
     </div>`;
   }
   body.innerHTML = html + wizNav();
@@ -898,6 +918,63 @@ window.validateBrief = () => {
   closeModal();
   location.hash = '#/sequence/' + seq.id;
   toast('Séquence générée ✓ — sauvegardée dans « Mon espace »');
+};
+
+/* ---- Génération par IA (via Cloudflare Worker → API Claude) ---- */
+window.saveAiEndpoint = () => {
+  const el = $('#aiEndpoint'); const v = el ? el.value.trim() : '';
+  if (!/^https?:\/\//.test(v)) { toast('URL invalide (doit commencer par https://)'); return; }
+  AI_ENDPOINT = v; localStorage.setItem(AI_KEY, v);
+  toast('Endpoint IA enregistré ✓'); renderWizStep();
+};
+
+function assembleAiSequence(state, ai) {
+  const base = buildGeneratedSequence(state); // scaffold + métadonnées (visuel, badges, livrables…)
+  ['title', 'objet', 'problematique', 'resume', 'objectifs', 'tacheFinale',
+    'seancesDetail', 'evaluation', 'differenciation', 'prolongements', 'ancrage', 'idees']
+    .forEach(k => { if (ai[k] != null) base[k] = ai[k]; });
+  base.id = 'gen-' + Date.now();
+  base.aiGenerated = true;
+  if (Array.isArray(base.seancesDetail) && base.seancesDetail.length) {
+    base.seances = base.seancesDetail.length;
+    base.duree = `≈ ${base.seances} × 55 min`;
+  }
+  return base;
+}
+
+window.generateWithAI = async () => {
+  const t = $('#wTheme'); if (t) WSTATE.theme = t.value;
+  if (!AI_ENDPOINT) { toast("Configurez d'abord l'endpoint IA"); return; }
+  openModal(`<div style="text-align:center;padding:8px 4px">
+    <div style="font-size:2.4em">✨</div>
+    <h2 style="margin:.2em 0">Génération par l'IA…</h2>
+    <p class="muted">Recherche d'articles réels, puis rédaction de la séquence au format attendu. Quelques secondes…</p>
+    <div class="spinner" style="margin:14px auto"></div></div>`);
+  try {
+    const res = await fetch(AI_ENDPOINT, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        niveau: WSTATE.niveau, statut: WSTATE.statut, voie: WSTATE.voie,
+        axe: +WSTATE.axe, axeName: axeName(+WSTATE.axe, WSTATE.niveau),
+        cecrl: CECRL[WSTATE.niveau][WSTATE.statut],
+        theme: WSTATE.theme || '', duree: +WSTATE.duree || 5,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok || !data.sequence) throw new Error(data.error || ('HTTP ' + res.status));
+    const seq = assembleAiSequence(WSTATE, data.sequence);
+    GENERATED.push(seq); saveGenerated();
+    closeModal();
+    location.hash = '#/sequence/' + seq.id;
+    toast('Séquence IA générée ✓ — articles réels inclus');
+  } catch (err) {
+    openModal(`<div style="text-align:center;padding:8px 4px">
+      <div style="font-size:2.4em">⚠️</div>
+      <h2 style="margin:.2em 0">Échec de la génération IA</h2>
+      <p class="muted">${esc(String(err.message || err))}</p>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="closeModal();validateBrief()">Générer la version locale (instantanée)</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="closeModal()">Fermer</button></div>`);
+  }
 };
 
 /* ============================================================
