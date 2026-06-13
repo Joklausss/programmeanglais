@@ -835,7 +835,7 @@ function renderWizStep() {
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)">
         ${AI_ENDPOINT ? `
           <button class="btn btn-ghost btn-block" onclick="generateWithAI()">✨ Générer avec l'IA — vrais articles</button>
-          <p class="muted small" style="margin:.5em 0 0">L'IA cherche 2-3 articles réels sur « ${esc(WSTATE.theme || 'le thème')} » (sources web vérifiées) et rédige la séquence autour, au même format. ~5 s.</p>
+          <p class="muted small" style="margin:.5em 0 0">L'IA cherche 2-3 articles réels sur « ${esc(WSTATE.theme || 'le thème')} » (sources web vérifiées) et rédige la séquence autour, au même format. Compter <b>1 à 3 min</b>.</p>
         ` : `
           <details><summary class="muted small" style="cursor:pointer;list-style:none">✨ Activer la génération par IA (articles réels)…</summary>
             <p class="muted small" style="margin:.6em 0 .4em">Collez l'URL de votre fonction Cloudflare Worker (voir <code>worker/README.md</code>) :</p>
@@ -948,7 +948,7 @@ window.generateWithAI = async () => {
   openModal(`<div style="text-align:center;padding:8px 4px">
     <div style="font-size:2.4em">✨</div>
     <h2 style="margin:.2em 0">Génération par l'IA…</h2>
-    <p class="muted">Recherche d'articles réels, puis rédaction de la séquence au format attendu. Quelques secondes…</p>
+    <p class="muted">Recherche d'articles réels, puis rédaction de la séquence au format attendu. Comptez <b>1 à 3 minutes</b> — ne fermez pas la page.</p>
     <div class="spinner" style="margin:14px auto"></div></div>`);
   try {
     const res = await fetch(AI_ENDPOINT, {

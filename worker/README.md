@@ -62,7 +62,7 @@ curl -X POST https://lingualab-ia.VOTRE-COMPTE.workers.dev \
 
 - Modèle : **`claude-opus-4-8`** (modifiable dans `worker.js`, constante `MODEL` ; ex. `claude-sonnet-4-6` moins cher).
 - Recherche web + rédaction : quelques **centimes** par séquence.
-- Latence : **~5-10 s** (recherche + rédaction).
+- Latence : **~1 à 3 min** (recherche web + rédaction en streaming). La requête est *streamée* côté serveur pour éviter la coupure à 100 s (erreur 524).
 
 ## Paramètres reçus (POST JSON)
 

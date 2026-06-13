@@ -96,6 +96,38 @@ async function anthropic(env, body) {
 
 const textOf = (resp) => (resp.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
 
+/* Appel en STREAMING : indispensable pour les réponses longues, sinon une
+   passerelle coupe la requête au bout de ~100 s (erreur 524). On accumule
+   uniquement le texte (on ignore les éventuels blocs de raisonnement). */
+async function anthropicText(env, body) {
+  const r = await fetch(ANTHROPIC_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ ...body, stream: true }),
+  });
+  if (!r.ok) { const t = await r.text(); throw new Error('Anthropic ' + r.status + ' : ' + t.slice(0, 300)); }
+  const reader = r.body.getReader();
+  const dec = new TextDecoder();
+  let buf = '', text = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      let ev; try { ev = JSON.parse(payload); } catch (e) { continue; }
+      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') text += ev.delta.text;
+      if (ev.type === 'error') throw new Error('Anthropic stream : ' + (ev.error && ev.error.message || 'erreur'));
+    }
+  }
+  return text.trim();
+}
+
 /* Étape 1 — chercher 2-3 vrais articles (web search, server tool) */
 async function findArticles(env, p) {
   const prompt = `Find 2 to 3 real, recent, English-language articles or documents about "${p.theme}" that are suitable for a French lycée class (${p.niveau}, level CECRL ${p.cecrl}, cultural axis "${p.axeName}") and that are good for class discussion/debate. Prefer reputable sources (The Guardian, BBC, The New York Times, NPR, etc.).
@@ -117,7 +149,46 @@ No preamble, no conclusion.`;
   return textOf(resp);
 }
 
-/* Étape 2 — rédiger la séquence au format strict (structured output) */
+/* Forme JSON attendue (décrite dans le prompt — pas de grammaire stricte,
+   qui dépasse la limite de compilation côté API pour un schéma de cette taille). */
+const SHAPE = `{
+  "title": "titre de la séquence (peut être en anglais)",
+  "objet": "objet d'étude (1 phrase)",
+  "problematique": "question directrice EN ANGLAIS, propice au débat",
+  "resume": "résumé de la séquence (3-4 phrases)",
+  "objectifs": {
+    "culturels": ["objectif culturel", "..."],
+    "langagiers": {
+      "Compréhension de l'oral": "objectif",
+      "Compréhension de l'écrit": "objectif",
+      "Expression orale en continu": "objectif",
+      "Expression écrite": "objectif",
+      "Interaction orale et écrite": "objectif",
+      "Médiation": "objectif"
+    },
+    "grammaire": ["point de grammaire", "..."],
+    "lexique": ["champ lexical", "..."],
+    "phonologie": ["point de phonologie", "..."]
+  },
+  "tacheFinale": { "titre": "titre", "consigne": "consigne détaillée", "activites": ["activité langagière", "..."], "perspective": "perspective actionnelle (1 phrase)" },
+  "seancesDetail": [
+    { "n": 1, "titre": "titre de séance", "objectif": "objectif de la séance",
+      "phases": [ { "nom": "Anticipation / Lead-in", "min": "8 min", "desc": "consigne + modalité + production attendue" } ],
+      "supports": [ { "type": "Article", "titre": "titre du document", "src": "média + URL RÉELLE de l'article" } ] }
+  ],
+  "evaluation": {
+    "diagnostique": "modalité",
+    "formative": ["temps d'évaluation formative", "..."],
+    "sommative": "modalité (tâche finale)",
+    "grille": [ { "critere": "critère", "desc": "descripteur", "points": 6 } ]
+  },
+  "differenciation": { "soutien": ["aide"], "approfondissement": ["défi"], "modalites": ["modalité de travail"] },
+  "prolongements": ["piste de prolongement", "..."],
+  "ancrage": [ { "type": "Article", "oeuvre": "titre du document réel", "source": "média + URL réelle" } ],
+  "idees": ["idée de thème connexe propice au débat", "... (5 à 6 idées)"]
+}`;
+
+/* Étape 2 — rédiger la séquence au format attendu (JSON dans le prompt) */
 async function buildSequence(env, p, articles) {
   const N = Math.max(3, Math.min(8, p.duree || 5));
   const sys = `Tu es un assistant pédagogique expert pour professeurs d'anglais au lycée français. Tu produis des séquences conformes au programme officiel (Eduscol), dans la perspective actionnelle.
@@ -125,24 +196,26 @@ Règles de rédaction :
 - Les champs descriptifs (objectifs, consignes, déroulé, évaluation, différenciation) sont rédigés EN FRANÇAIS, comme un·e professeur·e les écrirait. Les titres et la tâche finale peuvent être en anglais.
 - Chaque séance suit la structure : Anticipation/Lead-in → Compréhension → Production → Trace écrite ; la dernière séance = Préparation → Production → Co-évaluation. Pour chaque phase : durée, consigne, modalité, production attendue.
 - Place les ARTICLES RÉELS fournis comme supports centraux : reporte-les dans "supports" (avec leur URL réelle dans "src") ET dans "ancrage" (oeuvre = titre, source = média + URL).
-- Niveau CECRL visé : ${p.cecrl}. Adapte la longueur des productions au niveau.`;
+- Niveau CECRL visé : ${p.cecrl}. Adapte la longueur des productions au niveau.
+- Tu réponds UNIQUEMENT par un objet JSON valide : aucun texte avant ou après, pas de balises Markdown, pas de commentaires.`;
   const usr = `Conçois une séquence complète pour :
 - Niveau : ${p.niveau} · Voie : ${p.statut} · CECRL ${p.cecrl}
 - Axe : ${p.axeName}
 - Thématique : « ${p.theme} »
-- Durée : ${N} séances
+- Durée : ${N} séances (la dernière entièrement dédiée à la tâche finale)
 
 ARTICLES RÉELS À EXPLOITER (sources web vérifiées) :
 ${articles || '(aucun article trouvé — propose des types de documents authentiques pertinents)'}
 
-Produis l'objet séquence au format imposé (${N} séances, dont la dernière dédiée à la tâche finale).`;
-  const resp = await anthropic(env, {
+Réponds UNIQUEMENT par un objet JSON respectant EXACTEMENT cette structure (mêmes clés, ${N} séances) :
+${SHAPE}`;
+  let txt = await anthropicText(env, {
     model: MODEL, max_tokens: 16000,
     system: sys,
-    output_config: { format: { type: 'json_schema', schema: SEQ_SCHEMA } },
     messages: [{ role: 'user', content: usr }],
   });
-  const txt = textOf(resp);
+  const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+  if (a >= 0 && b > a) txt = txt.slice(a, b + 1);
   return JSON.parse(txt);
 }
 
